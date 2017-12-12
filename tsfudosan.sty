@@ -1,0 +1,262 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{tsfudosan}[2017/12/12 v0.01]
+\RequirePackage{xintexpr}
+\RequirePackage{amsmath}
+\newcommand{\Smatrix}[1]{\begin{smallmatrix}#1\end{smallmatrix}}
+\newcommand{\Matrix}[1]{\begin{matrix}#1\end{matrix}}
+
+\newcounter{経過年数}
+\def\シミュレーション年数{30}
+
+
+\def\初年号{17}% 初年度の西暦下二桁
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\動年号{\xinttheexpr \value{経過年数} + \初年号 - 1 \relax}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\年表示{\arabic{経過年数}}
+
+\def\物件名{ほげ荘}%
+\def\物件サブタイトル{}%
+\def\物件価格{\xintTrunc{4}{10000.0000}}
+\def\物件購入手数料率{0.07}%
+
+\def\融資金利{0.02}%
+\def\融資返済年数{22}%
+\def\頭金率{0.1}%
+
+\def\空室率{0.05}%
+\def\運営費率{0.15}%
+\def\家賃減衰率{0.015}%1年ごとで
+\def\初年想定総収入{\xintTrunc{4}{1000.0000}}%
+\def\潜在総収入{\初年想定総収入}%
+
+\def\実行総収入{\xintRound{4}{\xinttheexpr \潜在総収入 * (1 - \空室率) \relax}}%
+\def\運営費{\xintRound{4}{\xinttheexpr \潜在総収入 * \運営費率 \relax}}%
+\def\営業純収益{\xintRound{4}{\xinttheexpr \実行総収入 - \運営費 \relax}}%
+\def\税引前キャッシュフロオ{\xintRound{4}{\xinttheexpr \営業純収益 - \修正年間元利金返済 - \繰上返済年額*(1 + \繰上返済手数料率)\relax}}%
+\def\総収益率{\xintRound{5}{\xinttheexpr \営業純収益 / \投資総額 \relax}}%
+
+\def\GPI{\潜在総収入}
+\def\EGI{\実行総収入}
+\def\Opex{\運営費}
+\def\NOI{\営業純収益}
+\def\ADS{\年間元利金返済}
+\def\BTCF{\税引前キャッシュフロオ}
+
+
+\def\売却価格減衰率{0.02}%1年ごとで
+\def\売却手数料率{0.04}%
+\def\繰上返済手数料率{0.01}%
+
+
+\def\BTCF累計に加算{\xdef\BTCF累計{\xintRound{4}{\xinttheexpr \BTCF累計 + \BTCF \relax}}\BTCF累計}
+\def\家賃減衰{\xdef\潜在総収入{\xintTrunc{4}{\xinttheexpr \潜在総収入 * (1 - \家賃減衰率 ) \relax}}}
+\def\売却価格減衰{\xdef\売却価格{\xintTrunc{4}{\xinttheexpr \売却価格 * (1 - \売却価格減衰率 ) \relax}}}
+\def\売り出し利回り{\xintTrunc{5}{\xinttheexpr \潜在総収入 / \売却価格 \relax}}
+
+
+\def\トオタルゲイン{%
+\xintRound{4}{\xinttheexpr -\自己資金 +\BTCF累計 + \BTCFs \relax}%
+}
+
+
+\def\繰上返済年額A{0.0000}
+\def\繰上返済年額B{0.0000}
+\def\繰上返済年額C{0.0000}
+\def\ABthreshold{\シミュレーション年数} % デフォルトではステージAのみ
+\def\BCthreshold{\シミュレーション年数} % デフォルトではステージAのみ
+\def\繰上返済年額基本{\xintifboolexpr{\value{経過年数} < 1+\BCthreshold}{\xintifboolexpr{\value{経過年数} < 1+\ABthreshold}{\繰上返済年額A}{\繰上返済年額B}}{\繰上返済年額C}}
+\def\繰上返済年額翌年{\xintifboolexpr{\value{経過年数} < \BCthreshold}{\xintifboolexpr{\value{経過年数} < \ABthreshold}{\繰上返済年額A}{\繰上返済年額B}}{\繰上返済年額C}}
+\def\全額繰上返済する融資残高{10.0000}
+
+
+\newcommand{\MakeSheet}{%
+  \onecolumn
+  \begingroup
+  \MakeSheetTitle
+  \edef\物件購入手数料{\xintTrunc{4}{\xinttheexpr \物件価格*\物件購入手数料率 \relax}}%
+  \edef\投資総額{\xintTrunc{4}{\xinttheexpr \物件価格+\物件購入手数料 \relax}}%
+  \edef\頭金{\xintTrunc{4}{\xinttheexpr \物件価格*\頭金率 \relax}}%
+  \edef\自己資金{\xintTrunc{4}{\xinttheexpr \頭金 + \物件購入手数料 \relax}}%
+  \edef\融資金額{\xintTrunc{4}{\xinttheexpr \物件価格 - \頭金 \relax}}%
+  \edef\表面利回り{\xintTrunc{5}{\xinttheexpr \初年想定総収入 / \物件価格 \relax}}%
+  \edef\修正年倍率{\xintRound{10}{\xinttheexpr (1 + (\融資金利/12))^(12) \relax}}%
+  \edef\逆残存年数倍率{\xintRound{10}{\xinttheexpr \修正年倍率^(-\融資返済年数) \relax}}%
+  \edef\翌年逆残存年数倍率{\xintRound{10}{\xinttheexpr \修正年倍率 * \逆残存年数倍率 \relax}}%
+  \edef\年間元利金返済{\xintRound{4}{\xinttheexpr \融資金額 * \融資金利 / ( 1 - \逆残存年数倍率)\relax}}%
+  \edef\売却価格{\物件価格}%初期値
+  \edef\潜在総収入{\初年想定総収入}%
+  \edef\BTCF累計{0}%
+  \edef\修正年間元利金返済{\年間元利金返済}%
+  \def\繰上返済年額{\繰上返済年額基本}%
+  \MakeSheetInfo
+  \MakeSimulation
+  \setcounter{経過年数}{0}%
+  \endgroup
+  }
+
+\def\支払利息{\xintRound{4}{\xinttheexpr \修正年間元利金返済 - \融資残高*(\翌年逆残存年数倍率 -\逆残存年数倍率)/(1-\逆残存年数倍率) \relax}}
+
+\newcommand{\MakeSheetTitle}{\section*{\物件名 \物件サブタイトル}}
+\newcommand{\MakeSheetInfo}{%
+  \noindent\begin{tabular}[t]{|l|r|c|l|r|c|l|r|c|l|r|c|l|r|}\hline
+             物件価格   & \物件価格 
+             & & 融資比率(LTP) &  \xintRound{2}{\xinttheexpr (1 - \頭金率) * 100 \relax}\% 
+             & & 融資金額(LB)  & \融資金額 
+             & & 元利返済年額$\text{(ADS)}_1$ & \年間元利金返済
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             % & & 繰上返済年額（〜59歳） & \繰上返済年額A
+             & & &
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             \\ \hline
+             購入手数料(\xintRound{2}{\xinttheexpr \物件購入手数料率 * 100 \relax}\%)  & \物件購入手数料 
+             & & 頭金 &  \頭金 
+             & & 融資金利 & \xintRound{2}{\xinttheexpr \融資金利 * 100 \relax}\%  
+             & & 繰上返済手数料率  & \xintRound{2}{\xinttheexpr \繰上返済手数料率 * 100 \relax}\%
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             % & & 繰上返済年額（60〜64歳） & \繰上返済年額B
+             & & &
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             \\ \hline
+             投資総額 & \投資総額 
+             & & 自己資金 & \自己資金 
+             & & 融資返済年数 & \融資返済年数 年 
+             & & & 
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             % & & 繰上返済年額（65歳〜） & \繰上返済年額C
+             & & & 
+             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+             \\ \hline
+             \multicolumn{1}{c}{} \\[-1ex]
+             \hline
+             初年想定総収入  & \初年想定総収入
+             & & 空室率 & \xintRound{2}{\xinttheexpr \空室率 * 100 \relax}\% 
+             & & 営業純収益$(\text{NOI})_1$ & \営業純収益
+             & &家賃減衰率（年） & \xintRound{2}{\xinttheexpr \家賃減衰率 * 100 \relax}\% 
+             & & 売却価格減衰率（年）  & \xintRound{2}{\xinttheexpr \売却価格減衰率 * 100 \relax}\%  
+             \\ \hline
+             表面利回り & \xintTrunc{2}{\xinttheexpr \表面利回り * 100 \relax}\% 
+             & & 運営費率 & \xintRound{2}{\xinttheexpr \運営費率 * 100 \relax}\%  
+             & &  総収益率$(\text{FCR})_1$&  \xintRound{2}{\xinttheexpr \総収益率 * 100 \relax}\% 
+             & & &
+             & & 売却手数料率  & \xintRound{2}{\xinttheexpr \売却手数料率 * 100 \relax}\%
+             \\ \hline
+           \end{tabular}
+}
+
+\newcount\tsfdsn@yearcnt
+\newcount\tsfdsn@yearlimit
+
+\newcommand{\MakeSimulation}{%
+  \def\返済前の一年分{%
+    \年表示
+    & \GPI 
+    & \EGI 
+    & \Opex 
+    & \NOI 
+    &\修正年間元利金返済
+    &\支払利息
+    & $\繰上返済年額$
+    & $\BTCF$ 
+    & $\BTCF累計に加算$ 
+    & 
+    \xdef\融資残高{\xintRound{4}{\xinttheexpr -\繰上返済年額 + \融資残高*(1-\翌年逆残存年数倍率)/(1-\逆残存年数倍率) \relax}}%
+    $\融資残高$
+    %%% 
+    \ifnum\融資返済年数>\value{経過年数}
+    \xdef\修正年間元利金返済{\xintRound{4}{\xinttheexpr \融資残高*\融資金利/(1-\翌年逆残存年数倍率)\relax}}%
+    \xintifboolexpr{\融資残高 <= max(\修正年間元利金返済 + \繰上返済年額翌年, \全額繰上返済する融資残高 ) }{%
+      \xdef\繰上返済年額{\xintRound{4}{\xinttheexpr \融資残高*(1-\翌年逆残存年数倍率*\修正年倍率)/(1-\翌年逆残存年数倍率) \relax}}%
+    }{}%
+    \else
+    \xdef\修正年間元利金返済{0}%
+    \fi
+    & 
+    \家賃減衰
+    \売却価格減衰
+    $\売却価格$
+    & \xdef\売却収入{\xintRound{4}{\xinttheexpr \売却価格 * (1 - \売却手数料率) \relax}}%
+    \売却収入
+    & \xdef\BTCFs{ \xinttheexpr \売却収入 - (1+\繰上返済手数料率)*\融資残高\relax}
+    \xintRound{4}{\BTCFs}
+    & $\トオタルゲイン$
+    & $\xintifboolexpr{\自己資金 = 0}{\text{\footnotesize undefined}}{\xintRound{3}{\xinttheexpr (\BTCF累計 + \BTCFs) / \自己資金 \relax}}$
+    
+    \stepcounter{経過年数}%
+    \xdef\逆残存年数倍率{\翌年逆残存年数倍率}%
+    \xdef\翌年逆残存年数倍率{\xintRound{10}{\xinttheexpr \修正年倍率 * \逆残存年数倍率 \relax}}%
+  }%
+  \def\返済後の一年分{%
+    \年表示
+    & \GPI 
+    & \EGI 
+    & \Opex 
+    & \NOI 
+    & 0
+    & 0
+    & 0
+    & \def\年間元利金返済{0} $\BTCF$ 
+    & \def\年間元利金返済{0} $\BTCF累計に加算$ 
+    & 0
+    & 
+    \家賃減衰
+    \売却価格減衰
+    $\売却価格$
+    & \xdef\売却収入{\xintRound{4}{\xinttheexpr \売却価格 * (1 - \売却手数料率) \relax}}%
+    \売却収入
+    & \xdef\BTCFs{\売却収入}
+    \xintRound{4}{\BTCFs}
+    & $\トオタルゲイン$
+    & $\xintifboolexpr{\自己資金 = 0}{\text{\footnotesize undefined}}{\xintRound{3}{\xinttheexpr (\BTCF累計 + \BTCFs) / \自己資金 \relax}}$
+    \stepcounter{経過年数}%
+  }%
+  \setcounter{経過年数}{1}%
+  \def\返済前のテエブル{}
+  \newif\if最後の返済年
+  \tsfdsn@yearcnt=0 \tsfdsn@yearlimit=\融資返済年数\relax
+  \loop \ifnum\tsfdsn@yearcnt<\tsfdsn@yearlimit 
+  \advance\tsfdsn@yearcnt 1
+  \expandafter\def\expandafter\返済前のテエブル\expandafter{%
+    \返済前のテエブル \返済前の一年分\\\hline
+    \xintifboolexpr{(\value{経過年数} = 1+\ABthreshold) || (\value{経過年数} =1+\BCthreshold)}{\hline}{}%
+  }%
+  \repeat
+  \def\返済後のテエブル{}
+  \tsfdsn@yearcnt=\融資返済年数 \tsfdsn@yearlimit=\シミュレーション年数 \relax
+  \loop \ifnum\tsfdsn@yearcnt<\tsfdsn@yearlimit 
+  \advance\tsfdsn@yearcnt 1
+  \expandafter\def\expandafter\返済後のテエブル\expandafter{%
+    \返済後のテエブル \返済後の一年分\\\hline
+  }%
+  \repeat
+  \begin{flushleft}
+    \edef\融資残高{\融資金額}%
+    \begin{tabular}{|r|r|r|r|r||r|r|r||r|r||r||r|r|r||r|r|}\hline
+      年
+      & $\Matrix{\text{(GPI)}_n\\ \Smatrix{\text{Gross}\\ \text{Potential}\\ \text{Income}} }$ % 潜在総収入 
+      & $\Matrix{\text{(EGI)}_n\\ \Smatrix{\text{Effective}\\ \text{Gross}\\ \text{Income}} }$ %実効総収入 
+      & $\Matrix{\text{(Opex)}_n\\ \Smatrix{\text{Operating}\\ \text{Expense}} }$ % \multicolumn{1}{|c|}{運営費} 
+      & $\Matrix{\text{(NOI)}_n\\ \Smatrix{\text{Net}\\ \text{Operating}\\ \text{Income}} }$ % 営業純収益 
+      & $\Matrix{\text{(ADS)}_n\\ \Smatrix{\text{Annual}\\ \text{Debt}\\ \text{Service}} }$ % 元利返済年額
+      & 支払利息
+      & 繰上返済
+      & $\Matrix{\text{(BTCFo)}_n\\ \Smatrix{\text{Before-Tax}\\ \text{Cash Flow}\\ \text{from Op.}} }$ %BTCFo
+      & $\sum(\text{BTCFo})_n$ % BTCFo累計
+      & $\Matrix{\text{融資残高}\\\text{（元本）}}$
+      & 売却価格
+      & 売却収入
+      & $\Matrix{\text{BTCFs}\\ \Smatrix{\text{Before-Tax}\\ \text{Cash Flow}\\ \text{from Sales}} }$
+      & $\Matrix{\text{BTCF}\!_{\mathrm{o}+\mathrm{s}}\quad \\ \quad -\,\text{自己資金}}$
+      & $\dfrac{\ \text{\scriptsize BTCF}_{\mathrm{o}+\mathrm{s}}\;}{\;\text{\footnotesize 自己資金}\;}$
+      \\\hline
+      \返済前のテエブル\hline
+      \返済後のテエブル
+    \end{tabular}\\
+  \end{flushleft}
+}
+
+
+%%% Local Variables:
+%%% mode: japanese-latex
+%%% TeX-master: "texdefudosan"
+%%% End:
