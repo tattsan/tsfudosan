@@ -211,7 +211,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \def\物件サブタイトル{：動的な繰上返済}%
 \def\繰上返済年額A{\xintRound{4}{
-  \xintifboolexpr{\the経過年数 = 1}{0.0000}{
+  \xintifboolexpr{\the経過年数 == 1}{0.0000}{
      \xinttheexpr  (max(0, \NOI -20.0000 - \修正年間元利金返済))/(1+\繰上返済手数料率) \relax
 }}}%
 \def\繰上返済年額B{\xintRound{4}{
@@ -264,7 +264,7 @@
 \def\所得税率{0.20}%
 \edef\減価償却節税額{\xintRound{4}{\xinttheexpr \減価償却費 *\所得税率 \relax}}%
 \def\繰上返済年額A{\xintRound{4}{
-  \xintifboolexpr{\the経過年数 = 1}{0.0000}{
+  \xintifboolexpr{\the経過年数 == 1}{0.0000}{
      \xinttheexpr  (max(0, \NOI -20.0000 - \修正年間元利金返済))/(1+\繰上返済手数料率) \relax
 }}}%
 \def\繰上返済年額B{\xintRound{4}{
